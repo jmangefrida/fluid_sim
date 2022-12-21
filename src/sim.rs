@@ -8,6 +8,48 @@ enum Field {
     SField
 }
 
+struct Scene {
+    gravity: f64,
+    dt: f64,
+    num_iters: i32,
+    frame_nr: i32,
+    over_relaxation: f64,
+    obstacle_x: f64,
+    obstacle_y: f64,
+    obstacle_radius: f64,
+    paused: bool,
+    scene_nr: i32,
+    show_obstacle: bool,
+    show_stream_lines: bool,
+    show_velocities: bool,
+    show_pressure: bool,
+    show_smoke: bool,
+    fluid: Fluid
+}
+
+impl Default for Scene {
+    fn default() -> Self {
+        Scene { gravity: -9.81, 
+                dt: 1.0/120.0, 
+                num_iters: 100, 
+                frame_nr: (), 
+                over_relaxation: 1.9, 
+                obstacle_x: 0.0, 
+                obstacle_y: 0.0, 
+                obstacle_radius: 0.15, 
+                paused: false, 
+                scene_nr: 0, 
+                show_obstacle: false, 
+                show_stream_lines: false, 
+                show_velocities: false, 
+                show_pressure: false, 
+                show_smoke: false ,
+                fluid: Fluid::new(1000.0, 500, 500, 50.0)
+            }
+    }
+}
+
+
 struct Fluid {
     density: f64,
     num_x: usize,
