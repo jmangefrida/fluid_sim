@@ -8,23 +8,23 @@ enum Field {
     SField
 }
 
-struct Scene {
-    gravity: f64,
-    dt: f64,
-    num_iters: i32,
-    frame_nr: i32,
-    over_relaxation: f64,
-    obstacle_x: f64,
-    obstacle_y: f64,
-    obstacle_radius: f64,
-    paused: bool,
-    scene_nr: i32,
-    show_obstacle: bool,
-    show_stream_lines: bool,
-    show_velocities: bool,
-    show_pressure: bool,
-    show_smoke: bool,
-    fluid: Fluid
+pub struct Scene {
+    pub gravity: f64,
+    pub dt: f64,
+    pub num_iters: i32,
+    pub frame_nr: i32,
+    pub over_relaxation: f64,
+    pub obstacle_x: f64,
+    pub obstacle_y: f64,
+    pub obstacle_radius: f64,
+    pub paused: bool,
+    pub scene_nr: i32,
+    pub show_obstacle: bool,
+    pub show_stream_lines: bool,
+    pub show_velocities: bool,
+    pub show_pressure: bool,
+    pub show_smoke: bool,
+    pub fluid: Fluid
 }
 
 impl Default for Scene {
@@ -32,7 +32,7 @@ impl Default for Scene {
         Scene { gravity: -9.81, 
                 dt: 1.0/120.0, 
                 num_iters: 100, 
-                frame_nr: (), 
+                frame_nr: 1, 
                 over_relaxation: 1.9, 
                 obstacle_x: 0.0, 
                 obstacle_y: 0.0, 
@@ -50,7 +50,7 @@ impl Default for Scene {
 }
 
 
-struct Fluid {
+pub struct Fluid {
     density: f64,
     num_x: usize,
     num_y: usize,
@@ -91,8 +91,8 @@ impl Fluid {
     fn integrate(&mut self, dt: f64, gravity: f64) {
         
         let n = self.num_y as usize;
-        for i in 1..self.num_x as usize +1 {
-            for j in 1..self.num_y as usize {
+        for i in 1..self.num_x - 1 as usize +1 {
+            for j in 1..self.num_y -1 as usize {
                 if self.s[i*n + j] != 0.0 && self.s[i*n + j-1] != 0.0 { //if this cell, and the one below it are fluids, apply gravity
                     self.v[i*n + j] += gravity * dt;
                 }
@@ -144,9 +144,9 @@ impl Fluid {
             self.u[i*n] = self.u[i*n + 1];
             self.u[i*n + self.num_y - 1] = self.u[i*n + self.num_y-2];
         }
-        for j in 0..self.num_y {
+        for j in 0..self.num_y - 1 {
             self.v[j] = self.v[n + j];
-            self.v[(self.num_x+1)*n + j] = self.u[(self.num_x-2)*n +j]
+            self.v[(self.num_x-1)*n + j] = self.u[(self.num_x-2)*n +j]
         }
     }
 
@@ -271,7 +271,7 @@ impl Fluid {
        self.m = self.new_m.to_vec();
     }
 
-    fn simulate(&mut self, dt:f64, gravity: f64, num_iters: i32) {
+    pub fn simulate(&mut self, dt:f64, gravity: f64, num_iters: i32) {
         self.integrate(dt, gravity);
         //self.p = vec![0.0; self.num_cells];
         self.solve_incompressibility(num_iters, dt);
