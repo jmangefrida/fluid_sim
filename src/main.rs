@@ -62,6 +62,8 @@ impl eframe::App for MyApp {
         self.scene.fluid.simulate(self.scene.dt, self.scene.gravity, self.scene.num_iters);
         self.frames += 1;
 
+    
+
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Fluid Sim");
             ui.horizontal(|ui| {
