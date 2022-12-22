@@ -24,12 +24,13 @@ pub struct Scene {
     pub show_velocities: bool,
     pub show_pressure: bool,
     pub show_smoke: bool,
+    pub sim_height: f64,
     pub fluid: Fluid
 }
 
 impl Default for Scene {
     fn default() -> Self {
-        Scene { gravity: -9.81, 
+        let mut sc: Scene =    Scene { gravity: -9.81, 
                 dt: 1.0/120.0, 
                 num_iters: 100, 
                 frame_nr: 1, 
@@ -44,8 +45,94 @@ impl Default for Scene {
                 show_velocities: false, 
                 show_pressure: false, 
                 show_smoke: false ,
+                sim_height: 1.1,
                 fluid: Fluid::new(1000.0, 500, 500, 50.0)
+            };
+        
+        sc.setup();
+        return sc;
+            
+    }
+
+
+}
+
+impl Scene {
+    pub fn setup(&mut self) {
+        self.obstacle_radius = 0.15;
+        self.over_relaxation = 1.9;
+        let res: i32 = 100;
+        let domain_height: f64 = 1.0;
+        //let domain_width: f64 = domain_height / self.sim_height
+        self.show_smoke = true;
+
+        let n = self.fluid.num_y;
+
+        for i in 0..self.fluid.num_x {
+            for j in 0..self.fluid.num_y {
+                let mut s = 1.0;
+                if i==0 || j==0 || j==self.fluid.num_y-1 {
+                    s = 0.0;
+                }
+                self.fluid.s[i*n + j] = s;
+                if i==1 {
+                    self.fluid.u[i*n +j] = 2.0;
+                }
+
+
             }
+
+
+        }
+
+        let pipe_h = 0.1 * self.fluid.num_y as f64;
+        let minj: f64 = 0.5 * self.fluid.num_y as f64 - 0.5*pipe_h;
+        let minj: i32 = minj.floor() as i32;
+        let maxj: f64 = 0.5 * self.fluid.num_x as f64 + 0.5*pipe_h;
+        let maxj: i32 = maxj.floor() as i32;
+
+        for j in minj..maxj {
+            self.fluid.m[j as usize] = 0.0;
+        }
+
+        self.set_obstacle(0.4, 0.5);
+
+
+
+
+    }
+
+    fn set_obstacle(&mut self, x: f64, y: f64,) {
+        let vx: f64 = 0.0;
+        let vy: f64 = 0.0;
+
+        self.obstacle_x = x;
+        self.obstacle_y = y;
+
+        let r = self.obstacle_radius;
+        let n = self.fluid.num_y;
+        let cd = 2.0_f64.sqrt() * self.fluid.h;
+
+        for i in 1..self.fluid.num_x-2 {
+            for j in 1..self.fluid.num_y-2 {
+                self.fluid.s[i*n + j] = 1.0;
+
+                let dx = (i as f64 + 0.5) * self.fluid.h - x;
+                let dy = (j as f64 + 0.5) * self.fluid.h - y;
+
+                if dx * dx + dy * dy < r * r {
+                    self.fluid.s[i*n +j] = 0.0;
+                    self.fluid.m[i*n +j] = 1.0;
+                    self.fluid.u[i*n +j] = vx;
+                    self.fluid.u[(i+1)*n + j] = vx;
+                    self.fluid.v[i*n + j] = vy;
+                    self.fluid.v[i*n + j+1] = vy;
+
+                }
+
+            }
+        }
+
     }
 }
 
@@ -81,7 +168,7 @@ impl Fluid {
                 new_u: vec![0.0; num_cells], 
                 new_v: vec![0.0; num_cells], 
                 p: vec![0.0; num_cells], 
-                s: vec![0.0; num_cells], 
+                s: vec![0.5; num_cells], 
                 m: vec![1.0; num_cells], 
                 new_m: vec![0.0; num_cells] }
 
@@ -105,7 +192,7 @@ impl Fluid {
         let cp = self.density * self.h / dt;
 
         for _iter in 0..num_iters {
-            for i in 1..self.num_x {
+            for i in 1..self.num_x -1 {
                 for j in 1..self.num_y {
                     if self.s[i*n + j] == 0.0 {
                         continue; //if it is a static object...
@@ -163,10 +250,22 @@ impl Fluid {
         let y = match [y, self.num_y as f64 * h ].iter().min_by(|a, b| a.partial_cmp(b).unwrap()) {Some(val) => val.clone(), None => 0.0};
         let y = match [y, h].iter().max_by(|a,b| a.partial_cmp(b).unwrap()) {Some(val) => val.clone(), None => 0.0};
 
-        let dx: f64 = h2;
-        let dy: f64 = if field == Field::SField {h2} else {0.0};
-        let f = match field {Field::UField => &self.u, Field::VField => &self.v, Field::SField => &self.s};
+        let mut dx: f64 = 0.0;
+        let mut dy: f64 = 0.0;
 
+        let f = match field {
+            Field::UField => &self.u,
+            Field::VField => &self.v,
+            Field::SField => &self.s};
+
+
+        match field {
+            Field::UField=> dy = h2,
+            Field::VField=> dx = h2,
+            Field::SField=> {dx=h2; dy=h2},
+            
+        }
+        
         let x0 = match [((x - dx)*h1).floor(), (self.num_x - 1) as f64 ].iter().min_by(|a,b| a.partial_cmp(b).unwrap()) {Some(val) => val.clone(), None => 0.0};
         let tx = ((x-dx) - x0*h) *h1;
         let x1 = match [x0 + 1.0, self.num_x as f64 - 1.0].iter().min_by(|a, b| a.partial_cmp(b).unwrap()) {Some(val) => val.clone(), None => 0.0};
@@ -174,6 +273,8 @@ impl Fluid {
         let y0 = match [((y - dy)*h1).floor(), (self.num_y - 1) as f64 ].iter().min_by(|a,b| a.partial_cmp(b).unwrap()) {Some(val) => val.clone(), None => 0.0};
         let ty = ((y-dy) - y0*h) *h1;
         let y1 = match [y0 + 1.0, self.num_y as f64 - 1.0].iter().min_by(|a, b| a.partial_cmp(b).unwrap()) {Some(val) => val.clone(), None => 0.0};
+
+
 
         let sx = 1.0 - tx;
         let sy: f64 = 1.0 - ty;
@@ -184,6 +285,7 @@ impl Fluid {
         + tx*ty * f[x1 as usize*n + y1 as usize]
         + sx*ty * f[x0 as usize*n + y1 as usize];
 
+        //println!("{}",val);
         return val;
 
 
@@ -226,6 +328,7 @@ impl Fluid {
                     x = x - dt*u;
                     y = y - dt*v;
                     u = self.sample_field(x, y, Field::UField);
+                    //print!("({})", u);
                     self.new_u[i*n + j] = u;
  
                 }
@@ -238,6 +341,7 @@ impl Fluid {
                     x = x - dt*u;
                     y = y - dt*v;
                     v = self.sample_field(x, y, Field::VField);
+                    //print!("({})", v);
                     self.new_v[i*n + j] = v;
                 } 
             }
@@ -245,39 +349,60 @@ impl Fluid {
 
         self.u = self.new_u.to_vec();
         self.v = self.new_v.to_vec();
+        //println!("{}", self.s[200]);
 
     }
 
     fn advect_smoke(&mut self, dt: f64) {
+        println!("running smoke");
        self.new_m = self.m.to_vec();
        let n = self.num_y;       
        let h = self.h;
        let h2 = 0.5 * h;
 
-       for i in 1..self.num_x {
-        for j in 1..self.num_y {
+       for i in 1..self.num_x - 1 {
+        for j in 1..self.num_y - 1 {
             if self.s[i*n + j] != 0.0 {
                 let u = (self.u[i*n +j] + self.u[(i+1)*n + j]) * 0.5;
                 let v = (self.v[i*n +j] + self.v[i*n + j+1]) * 0.5;
-                let x: f64 = i as f64 *h + h2 - dt*u;
-                let y: f64 = i as f64 *h + h2 - dt*v;
+                let x: f64 = i as f64 * h + h2 - dt*u;
+                let y: f64 = j as f64 * h + h2 - dt*v;
 
                 self.new_m[i*n + j] = self.sample_field(x, y, Field::SField);
+                //println!("{}", self.new_m[i*n + j]);
 
 
             }
         }
        }
        self.m = self.new_m.to_vec();
+       //println!("{}|{}", self.m[250], self.m[2500]);
+       
     }
 
     pub fn simulate(&mut self, dt:f64, gravity: f64, num_iters: i32) {
-        self.integrate(dt, gravity);
-        //self.p = vec![0.0; self.num_cells];
+        //self.integrate(dt, gravity);
+        self.p = vec![0.0; self.num_cells as usize];
         self.solve_incompressibility(num_iters, dt);
         self.extrapolate();
         self.advect_vel(dt);
-        self.advect_smoke(dt);
+        //self.advect_smoke(dt);
+    }
+
+    pub fn build_image(&self) -> Vec<u8> {
+        let mut img: Vec<u8> = vec![];
+        for i in 0..self.num_cells{
+        //for s in self.u.iter() {
+            //let mut color: f64 = 255.0 * (self.u[i as usize] + self.v[i as usize]) / 2.0;
+            let mut color: f64 = 255.0 * self.m[i as usize];
+            color = color.floor();
+            img.push(color as u8);
+            img.push(color as u8);
+            img.push(color as u8);
+            //img.push(255);
+        }
+
+        return img;
     }
 
 }
