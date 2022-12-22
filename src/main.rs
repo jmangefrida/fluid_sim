@@ -4,6 +4,7 @@ use sim::Scene;
 use eframe::{egui, epaint::image};
 mod sim;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RunMode {
     Reactive,
     Continuous,

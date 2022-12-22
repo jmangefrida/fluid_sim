@@ -35,8 +35,8 @@ impl Default for Scene {
                 num_iters: 100, 
                 frame_nr: 1, 
                 over_relaxation: 1.9, 
-                obstacle_x: 0.0, 
-                obstacle_y: 0.0, 
+                obstacle_x: 100.0, 
+                obstacle_y: 100.0, 
                 obstacle_radius: 0.15, 
                 paused: false, 
                 scene_nr: 0, 
@@ -95,7 +95,10 @@ impl Scene {
             self.fluid.m[j as usize] = 0.0;
         }
 
-        self.set_obstacle(0.4, 0.5);
+        self.set_obstacle(200.0, 200.0);
+        self.set_square();
+        let sum: f64 = self.fluid.s.iter().sum();
+        println!("{:?}", sum);
 
 
 
@@ -103,13 +106,17 @@ impl Scene {
     }
 
     fn set_obstacle(&mut self, x: f64, y: f64,) {
-        let vx: f64 = 0.0;
-        let vy: f64 = 0.0;
+        println!("setup obs");
+        let vx: f64 = (x - self.obstacle_x) / self.dt;
+
+        let vy: f64 = (y - self.obstacle_y) / self.dt;
 
         self.obstacle_x = x;
         self.obstacle_y = y;
 
-        let r = self.obstacle_radius;
+        //let r = self.obstacle_radius;
+        let r: f64 = 2000.0;
+
         let n = self.fluid.num_y;
         let cd = 2.0_f64.sqrt() * self.fluid.h;
 
@@ -120,7 +127,10 @@ impl Scene {
                 let dx = (i as f64 + 0.5) * self.fluid.h - x;
                 let dy = (j as f64 + 0.5) * self.fluid.h - y;
 
+                println!("{}|{}", dx * dx + dy * dy, r * r);
+
                 if dx * dx + dy * dy < r * r {
+                    println!("{}", "block");
                     self.fluid.s[i*n +j] = 0.0;
                     self.fluid.m[i*n +j] = 1.0;
                     self.fluid.u[i*n +j] = vx;
@@ -133,6 +143,17 @@ impl Scene {
             }
         }
 
+    }
+
+    fn set_square(&mut self) {
+        let n = self.fluid.num_y;
+        for i in 0..500 {
+            for j in 0..500 {
+                if i < 200 && i > 100 && j < 200 && j > 100 {
+                    self.fluid.s[i*n + j] = 0.0;
+                }
+            }
+        }
     }
 }
 
@@ -150,7 +171,8 @@ pub struct Fluid {
     p: Vec<f64>,      //pressure
     s: Vec<f64>,      //scalar: 0: static object, 1: fluid
     m: Vec<f64>,      //smoke
-    new_m: Vec<f64>
+    new_m: Vec<f64>,
+    //check: Vec<f64>,
 }
 
 impl Fluid {
@@ -170,7 +192,8 @@ impl Fluid {
                 p: vec![0.0; num_cells], 
                 s: vec![0.5; num_cells], 
                 m: vec![1.0; num_cells], 
-                new_m: vec![0.0; num_cells] }
+                new_m: vec![0.0; num_cells],
+            }
 
     }
     // Applys gravity to the fluid.
@@ -250,6 +273,7 @@ impl Fluid {
         let y = match [y, self.num_y as f64 * h ].iter().min_by(|a, b| a.partial_cmp(b).unwrap()) {Some(val) => val.clone(), None => 0.0};
         let y = match [y, h].iter().max_by(|a,b| a.partial_cmp(b).unwrap()) {Some(val) => val.clone(), None => 0.0};
 
+        
         let mut dx: f64 = 0.0;
         let mut dy: f64 = 0.0;
 
@@ -390,18 +414,43 @@ impl Fluid {
     }
 
     pub fn build_image(&self) -> Vec<u8> {
+        let mut ctr: i32 = 0;
         let mut img: Vec<u8> = vec![];
         for i in 0..self.num_cells{
+            //ctr += 1.0/250000.0;
         //for s in self.u.iter() {
-            //let mut color: f64 = 255.0 * (self.u[i as usize] + self.v[i as usize]) / 2.0;
-            let mut color: f64 = 255.0 * self.m[i as usize];
+            let mut color: f64 = 255.0 * (self.u[i as usize] + self.v[i as usize]) / 2.0;
+            //let mut color: f64 = 255.0 * self.m[i as usize];
+            //let mut color: f64 = 255.0 * self.v[i as usize];
+
+            /*let mut color: f64 = 255.0 * ctr;
+            if i % 500 == 0 {
+                
+                color = 0.0;
+            } else {
+                println!("{}", i % 500);
+                //color = 128.0;
+                color = (i % 500) as f64;
+            }
+             */
             color = color.floor();
+            if self.s[i as usize] == 1.0 {
             img.push(color as u8);
             img.push(color as u8);
             img.push(color as u8);
+            } else {
+                img.push(255);
+                img.push(0);
+                img.push(0);
+            }
+            //println!("{}", self.s[i as usize]);
+            
+            
             //img.push(255);
         }
 
+        let sum: f64 = self.s.iter().sum();
+        //println!("{}", ctr);
         return img;
     }
 
