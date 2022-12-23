@@ -33,7 +33,7 @@ impl MyImage {
 
         let img_data: Vec<u8> = scene.fluid.build_image();
 
-        let img: image::ColorImage = image::ColorImage::from_rgb([500, 500], &img_data);
+        let img: image::ColorImage = image::ColorImage::from_rgb([scene.fluid.num_x, scene.fluid.num_y], &img_data);
 
         let texture: &egui::TextureHandle = self.texture.get_or_insert_with(|| {
             ui.ctx().load_texture("fluid-image", img, Default::default())
@@ -41,6 +41,8 @@ impl MyImage {
         });
 
         ui.image(texture, texture.size_vec2());
+
+        
     }
 }
 
@@ -67,20 +69,21 @@ impl eframe::App for MyApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Fluid Sim");
             ui.horizontal(|ui| {
-                let name_label = ui.label("text");
-                ui.text_edit_singleline(&mut self.name).labelled_by(name_label.id);
+                //let name_label = ui.label("text");
+                //ui.text_edit_singleline(&mut self.name).labelled_by(name_label.id);
             });
-            ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
-            if ui.button("Click year").clicked() {
-                self.age += 1;
-            }
-            ui.label(format!("Hello '{}', age {}", self.name, self.frames));
+            //ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
+            //if ui.button("Click year").clicked() {
+            //    self.age += 1;
+            //}
+            //ui.label(format!("Hello '{}', age {}", self.name, self.frames));
                         
 
             let mut img: MyImage = MyImage { texture: None};
             img.ui(ui, &self.scene);
         
 
+            ctx.request_repaint();
         });
 
     }
@@ -99,10 +102,10 @@ fn main() {
     eframe::run_native("Fluid Sim", options, Box::new(|_cc| Box::new(MyApp::default())));
 
 
-    let mut frames: i32 = 0;
-    let mut scene: Scene = Scene {..Default::default()};
+    //let mut frames: i32 = 0;
+    //let mut scene: Scene = Scene {..Default::default()};
     
-    
+/*     
     loop {
         scene.fluid.simulate(scene.dt, scene.gravity, scene.num_iters);
         let img: Vec<u8> = scene.fluid.build_image();
@@ -111,7 +114,7 @@ fn main() {
         if frames == 60 {
             break;
         }
-    }
+    } */
     
     
 }

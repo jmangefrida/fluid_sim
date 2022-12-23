@@ -31,7 +31,7 @@ pub struct Scene {
 impl Default for Scene {
     fn default() -> Self {
         let mut sc: Scene =    Scene { gravity: -9.81, 
-                dt: 1.0/120.0, 
+                dt: 1.0/60.0, 
                 num_iters: 100, 
                 frame_nr: 1, 
                 over_relaxation: 1.9, 
@@ -46,7 +46,7 @@ impl Default for Scene {
                 show_pressure: false, 
                 show_smoke: false ,
                 sim_height: 1.1,
-                fluid: Fluid::new(1000.0, 500, 500, 50.0)
+                fluid: Fluid::new(100.0, 400, 400, 50.0)
             };
         
         sc.setup();
@@ -92,13 +92,17 @@ impl Scene {
         let maxj: i32 = maxj.floor() as i32;
 
         for j in minj..maxj {
-            self.fluid.m[j as usize] = 0.0;
+            //self.fluid.u[j as usize] = 100.0;
         }
 
-        self.set_obstacle(200.0, 200.0);
-        self.set_square();
-        let sum: f64 = self.fluid.s.iter().sum();
-        println!("{:?}", sum);
+        for i in 0..self.fluid.num_x {
+            //self.fluid.u[i*self.fluid.num_x as usize] = 100.0;
+        }
+
+        self.set_obstacle(2000.0, 6000.0);
+        //self.set_square();
+        //let sum: f64 = self.fluid.s.iter().sum();
+        //println!("{:?}", sum);
 
 
 
@@ -115,7 +119,7 @@ impl Scene {
         self.obstacle_y = y;
 
         //let r = self.obstacle_radius;
-        let r: f64 = 2000.0;
+        let r: f64 = 750.0;
 
         let n = self.fluid.num_y;
         let cd = 2.0_f64.sqrt() * self.fluid.h;
@@ -127,16 +131,20 @@ impl Scene {
                 let dx = (i as f64 + 0.5) * self.fluid.h - x;
                 let dy = (j as f64 + 0.5) * self.fluid.h - y;
 
-                println!("{}|{}", dx * dx + dy * dy, r * r);
+                //println!("{}|{}", dx * dx + dy * dy, r * r);
 
                 if dx * dx + dy * dy < r * r {
-                    println!("{}", "block");
+                    //println!("{}", "block");
                     self.fluid.s[i*n +j] = 0.0;
                     self.fluid.m[i*n +j] = 1.0;
-                    self.fluid.u[i*n +j] = vx;
-                    self.fluid.u[(i+1)*n + j] = vx;
-                    self.fluid.v[i*n + j] = vy;
-                    self.fluid.v[i*n + j+1] = vy;
+                    //self.fluid.u[i*n +j] = 100.0;
+                    //self.fluid.u[i*n +j] = 100.0;
+                    //self.fluid.v[i*n +j] = 100.0;
+                    //self.fluid.v[i*n +j+1] = 100.0;
+                    self.fluid.u[(i+1)*n + j] = vx / 2.0;
+                    println!("vx={}", vx);
+                    //self.fluid.v[i*n + j] = vy / 50.0;
+                    //self.fluid.v[i*n + j+1] = vy / 100.0;
 
                 }
 
@@ -160,8 +168,8 @@ impl Scene {
 
 pub struct Fluid {
     density: f64,
-    num_x: usize,
-    num_y: usize,
+    pub num_x: usize,
+    pub num_y: usize,
     num_cells: i32,
     h: f64,            //size of cells
     u: Vec<f64>,      //velocity (horizontal)
@@ -340,7 +348,7 @@ impl Fluid {
 
         let n = self.num_y;
         let h = self.h;
-        let h2 = 0.5 * h;
+        let h2 = 0.75 * h;
 
         for i in 1..self.num_x {
             for j in 1..self.num_y {
@@ -378,7 +386,7 @@ impl Fluid {
     }
 
     fn advect_smoke(&mut self, dt: f64) {
-        println!("running smoke");
+        //println!("running smoke");
        self.new_m = self.m.to_vec();
        let n = self.num_y;       
        let h = self.h;
@@ -406,7 +414,7 @@ impl Fluid {
 
     pub fn simulate(&mut self, dt:f64, gravity: f64, num_iters: i32) {
         //self.integrate(dt, gravity);
-        self.p = vec![0.0; self.num_cells as usize];
+        //self.p = vec![0.0; self.num_cells as usize];
         self.solve_incompressibility(num_iters, dt);
         self.extrapolate();
         self.advect_vel(dt);
@@ -419,8 +427,9 @@ impl Fluid {
         for i in 0..self.num_cells{
             //ctr += 1.0/250000.0;
         //for s in self.u.iter() {
-            let mut color: f64 = 255.0 * (self.u[i as usize] + self.v[i as usize]) / 2.0;
+            let mut color: f64 = 1.0 * (self.u[i as usize] + self.v[i as usize]) / 500.0;
             //let mut color: f64 = 255.0 * self.m[i as usize];
+            //let mut color: f64 = 0.001 * self.p[i as usize];
             //let mut color: f64 = 255.0 * self.v[i as usize];
 
             /*let mut color: f64 = 255.0 * ctr;
@@ -435,6 +444,7 @@ impl Fluid {
              */
             color = color.floor();
             if self.s[i as usize] == 1.0 {
+                
             img.push(color as u8);
             img.push(color as u8);
             img.push(color as u8);
