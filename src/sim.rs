@@ -46,7 +46,7 @@ impl Default for Scene {
                 show_pressure: false, 
                 show_smoke: false ,
                 sim_height: 1.1,
-                fluid: Fluid::new(100.0, 400, 400, 50.0)
+                fluid: Fluid::new(100.0, 600, 600, 70.0)
             };
         
         sc.setup();
@@ -91,19 +91,21 @@ impl Scene {
         let maxj: f64 = 0.5 * self.fluid.num_x as f64 + 0.5*pipe_h;
         let maxj: i32 = maxj.floor() as i32;
 
-        for j in minj..maxj {
-            //self.fluid.u[j as usize] = 100.0;
-        }
+       
 
-        for i in 0..self.fluid.num_x {
-            //self.fluid.u[i*self.fluid.num_x as usize] = 100.0;
-        }
+        
 
-        self.set_obstacle(2000.0, 6000.0);
+        self.set_obstacle(6000.0, 12000.0);
         //self.set_square();
         //let sum: f64 = self.fluid.s.iter().sum();
         //println!("{:?}", sum);
+        //for j in minj..maxj {
+        //    self.fluid.u[(j + 500) as usize] = 1000.0;
+        //}
 
+        for i in 0..self.fluid.num_x {
+            self.fluid.u[i + self.fluid.num_x as usize] = 100000.0;
+        }
 
 
 
@@ -119,7 +121,7 @@ impl Scene {
         self.obstacle_y = y;
 
         //let r = self.obstacle_radius;
-        let r: f64 = 750.0;
+        let r: f64 = 1000.0;
 
         let n = self.fluid.num_y;
         let cd = 2.0_f64.sqrt() * self.fluid.h;
@@ -141,8 +143,8 @@ impl Scene {
                     //self.fluid.u[i*n +j] = 100.0;
                     //self.fluid.v[i*n +j] = 100.0;
                     //self.fluid.v[i*n +j+1] = 100.0;
-                    self.fluid.u[(i+1)*n + j] = vx / 2.0;
-                    println!("vx={}", vx);
+                    //self.fluid.u[(i+1)*n + j] = vx / 2.0; //This one
+                    //println!("vx={}", vx);
                     //self.fluid.v[i*n + j] = vy / 50.0;
                     //self.fluid.v[i*n + j+1] = vy / 100.0;
 
@@ -157,7 +159,7 @@ impl Scene {
         let n = self.fluid.num_y;
         for i in 0..500 {
             for j in 0..500 {
-                if i < 200 && i > 100 && j < 200 && j > 100 {
+                if i < 300 && i > 200 && j < 300 && j > 200 {
                     self.fluid.s[i*n + j] = 0.0;
                 }
             }
@@ -418,7 +420,7 @@ impl Fluid {
         self.solve_incompressibility(num_iters, dt);
         self.extrapolate();
         self.advect_vel(dt);
-        //self.advect_smoke(dt);
+        self.advect_smoke(dt);
     }
 
     pub fn build_image(&self) -> Vec<u8> {
@@ -428,8 +430,19 @@ impl Fluid {
             //ctr += 1.0/250000.0;
         //for s in self.u.iter() {
             let mut color: f64 = 1.0 * (self.u[i as usize] + self.v[i as usize]) / 500.0;
+            //if color < 0.0 {
+            //    println!("neg");
+            //}
+            //if color > 255.0 {
+            //    println!("Overflow");
+            //}
+            //if color > 10.0 {
+            //    println!("{}", color);
+            //}
             //let mut color: f64 = 255.0 * self.m[i as usize];
-            //let mut color: f64 = 0.001 * self.p[i as usize];
+            //println!("{}", self.m[i as usize]);
+            //let mut color: f64 = 0.000000005 * self.p[i as usize] + 100.0;
+            //println!("{}", color);
             //let mut color: f64 = 255.0 * self.v[i as usize];
 
             /*let mut color: f64 = 255.0 * ctr;
@@ -442,6 +455,7 @@ impl Fluid {
                 color = (i % 500) as f64;
             }
              */
+            //println!("{}", color);
             color = color.floor();
             if self.s[i as usize] == 1.0 {
                 
